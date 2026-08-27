@@ -1,3 +1,9 @@
+import Card from "../components/ui/Card";
+
 export default function NewCompany() {
-  return <div>New Company</div>;
+  return (
+    <Card>
+      <div>New Company</div>
+    </Card>
+  );
 }

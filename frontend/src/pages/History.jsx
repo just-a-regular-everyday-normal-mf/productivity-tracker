@@ -1,3 +1,9 @@
+import Card from "../components/ui/Card";
+
 export default function History() {
-  return <div>History</div>;
+  return (
+    <Card>
+      <div>History</div>
+    </Card>
+  );
 }

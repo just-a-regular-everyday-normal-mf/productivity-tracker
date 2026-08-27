@@ -1,3 +1,9 @@
+import Card from "../components/ui/Card";
+
 export default function CompaniesList() {
-  return <div>Companies List</div>;
+  return (
+    <Card>
+      <div>Companies List</div>
+    </Card>
+  );
 }
