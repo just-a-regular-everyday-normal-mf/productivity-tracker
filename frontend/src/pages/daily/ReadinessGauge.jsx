@@ -1,4 +1,4 @@
-import { TASK_IDS, isTaskComplete } from "./progress";
+import { TASK_IDS, isTaskComplete } from "../../utils/progress";
 
 const SIZE = 220;
 const CX = SIZE / 2;

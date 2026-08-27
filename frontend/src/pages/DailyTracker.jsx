@@ -7,20 +7,16 @@ import { fetchTodayLog, fetchDailyLogHistory, patchDailyLog } from "../api/daily
 import {
   interviewFraction,
   isTaskComplete,
-  joinTags,
   overallPercent,
-  parseTags,
+  percent,
   ratio,
   taskFraction,
-} from "./daily/progress";
+} from "../utils/progress";
+import { joinTags, parseTags } from "./daily/progress";
 import ReadinessGauge from "./daily/ReadinessGauge";
 import Stepper from "./daily/Stepper";
 import ToggleSwitch from "./daily/ToggleSwitch";
 import TagInput from "./daily/TagInput";
-
-function percent(fraction) {
-  return Math.round(fraction * 100);
-}
 
 function Field({ label, children }) {
   return (
