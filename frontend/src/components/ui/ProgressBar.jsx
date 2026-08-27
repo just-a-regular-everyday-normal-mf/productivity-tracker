@@ -1,11 +1,11 @@
-export default function ProgressBar({ value = 0, color }) {
+export default function ProgressBar({ value = 0, color, className = "" }) {
   const clamped = Math.min(100, Math.max(0, Number(value) || 0));
   const fillColor =
     color || (clamped >= 100 ? "var(--accent-green)" : "var(--accent-amber)");
 
   return (
     <div
-      className="progress-bar"
+      className={["progress-bar", className].filter(Boolean).join(" ")}
       role="progressbar"
       aria-valuenow={clamped}
       aria-valuemin={0}
