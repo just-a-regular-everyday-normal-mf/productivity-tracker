@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import ProgressBar from "../components/ui/ProgressBar";
-import { fetchTodayLog, patchTodayLog } from "../api/dailyLog";
+import { fetchTodayLog, fetchDailyLogHistory, patchDailyLog } from "../api/dailyLog";
 import {
   interviewFraction,
   isTaskComplete,
@@ -34,8 +34,11 @@ function Field({ label, children }) {
 export default function DailyTracker() {
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [finalizedNotice, setFinalizedNotice] = useState("");
   const logRef = useRef(null);
-  const saveTimer = useRef(null);
+  const serverLogRef = useRef(null);
+  const saveTimers = useRef({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,46 +49,82 @@ export default function DailyTracker() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const data = await fetchTodayLog();
-      if (!cancelled) {
-        setLog(data);
-        logRef.current = data;
-        setLoading(false);
+      setLoadError("");
+      try {
+        const [data] = await Promise.all([
+          fetchTodayLog(),
+          fetchDailyLogHistory().catch(() => []),
+        ]);
+        if (!cancelled) {
+          setLog(data);
+          logRef.current = data;
+          serverLogRef.current = data;
+        }
+      } catch {
+        if (!cancelled) {
+          setLoadError("Could not load today's log.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
-      if (saveTimer.current) {
-        clearTimeout(saveTimer.current);
-        if (logRef.current) patchTodayLog(logRef.current);
-      }
+      Object.values(saveTimers.current).forEach((timer) => clearTimeout(timer));
     };
   }, []);
 
-  function scheduleSave(next, immediate) {
-    logRef.current = next;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    const fire = () => patchTodayLog(logRef.current);
-    if (immediate) fire();
-    else saveTimer.current = setTimeout(fire, 500);
+  async function persistTask(key) {
+    const current = logRef.current;
+    if (!current?.id) return;
+    const snapshot = serverLogRef.current;
+    try {
+      const updated = await patchDailyLog(current.id, {
+        [key]: current.tasks[key],
+      });
+      const next = {
+        ...updated,
+        jobs_applied_today_count:
+          updated.jobs_applied_today_count ?? current.jobs_applied_today_count,
+      };
+      serverLogRef.current = next;
+      logRef.current = next;
+      setLog(next);
+    } catch (error) {
+      if (error.response?.status === 403) {
+        setFinalizedNotice(
+          "This day has been finalized — changes were not saved."
+        );
+        const reverted = snapshot
+          ? { ...snapshot, is_finalized: true }
+          : current;
+        serverLogRef.current = reverted;
+        logRef.current = reverted;
+        setLog(reverted);
+      }
+    }
   }
 
-  function setTasks(mutator, immediate) {
-    setLog((prev) => {
-      const next = {
-        ...prev,
-        tasks: mutator({ ...prev.tasks }),
-      };
-      scheduleSave(next, immediate);
-      return next;
-    });
+  function scheduleSave(key, immediate) {
+    if (saveTimers.current[key]) clearTimeout(saveTimers.current[key]);
+    const fire = () => persistTask(key);
+    if (immediate) fire();
+    else saveTimers.current[key] = setTimeout(fire, 500);
   }
 
   function patchTask(key, patch, immediate) {
-    setTasks((tasks) => ({
-      ...tasks,
-      [key]: { ...tasks[key], ...patch },
-    }), immediate);
+    setLog((prev) => {
+      const next = {
+        ...prev,
+        tasks: {
+          ...prev.tasks,
+          [key]: { ...prev.tasks[key], ...patch },
+        },
+      };
+      logRef.current = next;
+      return next;
+    });
+    scheduleSave(key, immediate);
   }
 
   function changeCount(key, completed, immediate = true) {
@@ -93,34 +132,48 @@ export default function DailyTracker() {
   }
 
   function changeTarget(key, target, immediate = false) {
-    setTasks((tasks) => {
-      const current = tasks[key];
+    setLog((prev) => {
+      const current = prev.tasks[key];
       const nextTarget = Math.max(1, target);
-      return {
-        ...tasks,
-        [key]: {
-          ...current,
-          target: nextTarget,
-          completed: Math.min(current.completed, nextTarget),
+      const next = {
+        ...prev,
+        tasks: {
+          ...prev.tasks,
+          [key]: {
+            ...current,
+            target: nextTarget,
+            completed: Math.min(current.completed, nextTarget),
+          },
         },
       };
-    }, immediate);
+      logRef.current = next;
+      return next;
+    });
+    scheduleSave(key, immediate);
   }
 
   async function refresh() {
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current);
-      if (logRef.current) await patchTodayLog(logRef.current);
-    }
+    Object.values(saveTimers.current).forEach((timer) => clearTimeout(timer));
     setLoading(true);
-    const data = await fetchTodayLog();
-    setLog(data);
-    logRef.current = data;
-    setLoading(false);
+    try {
+      const data = await fetchTodayLog();
+      setLog(data);
+      logRef.current = data;
+      serverLogRef.current = data;
+      setFinalizedNotice("");
+    } catch {
+      setLoadError("Could not load today's log.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (!log) {
-    return <p className="daily-status">Loading today's log…</p>;
+    return (
+      <p className="daily-status">
+        {loadError || "Loading today's log…"}
+      </p>
+    );
   }
 
   const { tasks, is_finalized: finalized } = log;
@@ -130,7 +183,11 @@ export default function DailyTracker() {
 
   return (
     <div className={["daily-page", locked ? "is-locked" : ""].join(" ")}>
-      {locked ? (
+      {finalizedNotice ? (
+        <div className="daily-banner" role="status">
+          {finalizedNotice}
+        </div>
+      ) : locked ? (
         <div className="daily-banner" role="status">
           This day is finalized and can no longer be edited.
         </div>

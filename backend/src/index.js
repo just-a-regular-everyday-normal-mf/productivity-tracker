@@ -3,10 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const passwordGate = require("./middleware/passwordGate");
-
-if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  require("./supabaseClient");
-}
+const dailyLogsRouter = require("./routes/dailyLogs");
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -27,6 +24,7 @@ app.post("/api/login", (req, res) => {
 });
 
 app.use("/api", passwordGate);
+app.use("/api/daily-log", dailyLogsRouter);
 
 app.listen(port, () => {
   console.log(`API listening on port ${port}`);
