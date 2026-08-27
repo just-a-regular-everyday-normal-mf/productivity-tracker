@@ -1,34 +1,13 @@
 const express = require("express");
+const {
+  getSupabase,
+  todayIso,
+  nowIso,
+  getTodayRow,
+  createTodayRow,
+} = require("../lib/dailyLogStore");
 
 const router = express.Router();
-
-function getSupabase() {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase is not configured");
-  }
-  return require("../supabaseClient");
-}
-
-const DEFAULT_TASKS = {
-  dsa: { target: 5, completed: 0 },
-  interview_java: { target: 20, completed: 0 },
-  interview_springboot: { target: 10, completed: 0 },
-  interview_systemdesign: { target: 5, completed: 0 },
-  system_design_deepdive: { target: 1, completed: 0, notes: "" },
-  design_patterns: { target: 2, completed: 0, notes: "" },
-  watch_videos: { target: 1, completed: 0, notes: "" },
-  workout: { target_min: 30, target_max: 45, completed_minutes: 0 },
-  jobs_applied_counter: { start: 30, remaining: 30 },
-  coding_practice: { target: 1, completed: 0, notes: "" },
-};
-
-function todayIso() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 function logDateIso(value) {
   if (!value) return "";
@@ -38,10 +17,6 @@ function logDateIso(value) {
 
 function isPastDate(logDate, today) {
   return logDateIso(logDate) < today;
-}
-
-function nowIso() {
-  return new Date().toISOString();
 }
 
 function mergeTasks(existing, incoming) {
@@ -100,37 +75,6 @@ async function finalizeRowIfPast(supabase, row, today) {
     return data;
   }
   return row;
-}
-
-async function getTodayRow(supabase, today) {
-  const { data, error } = await supabase
-    .from("daily_logs")
-    .select("*")
-    .eq("log_date", today)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-}
-
-async function createTodayRow(supabase, today) {
-  const payload = {
-    log_date: today,
-    is_finalized: false,
-    tasks: DEFAULT_TASKS,
-    updated_at: nowIso(),
-  };
-  const { data, error } = await supabase
-    .from("daily_logs")
-    .insert(payload)
-    .select()
-    .single();
-
-  if (error) {
-    const existing = await getTodayRow(supabase, today);
-    if (existing) return existing;
-    throw error;
-  }
-  return data;
 }
 
 router.get("/today", async (req, res) => {

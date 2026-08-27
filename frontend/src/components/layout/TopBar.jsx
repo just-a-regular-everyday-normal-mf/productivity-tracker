@@ -5,7 +5,7 @@ import Button from "../ui/Button";
 function pageTitle(pathname) {
   if (pathname === "/daily") return "Daily";
   if (pathname === "/companies") return "Companies";
-  if (pathname === "/companies/new") return "New Company";
+  if (pathname === "/companies/new") return "Log a New Application";
   if (pathname.startsWith("/companies/")) return "Company";
   if (pathname === "/history") return "History";
   return "OPS LOG";

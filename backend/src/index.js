@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const passwordGate = require("./middleware/passwordGate");
 const dailyLogsRouter = require("./routes/dailyLogs");
+const companiesRouter = require("./routes/companies");
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -25,6 +26,7 @@ app.post("/api/login", (req, res) => {
 
 app.use("/api", passwordGate);
 app.use("/api/daily-log", dailyLogsRouter);
+app.use("/api/companies", companiesRouter);
 
 app.listen(port, () => {
   console.log(`API listening on port ${port}`);

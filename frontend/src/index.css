@@ -498,6 +498,12 @@ a {
   font-size: 14px;
 }
 
+.daily-banner.is-success {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: color-mix(in srgb, var(--accent-green) 12%, var(--surface));
+}
+
 .readiness-gauge {
   position: relative;
   width: 220px;
@@ -809,6 +815,109 @@ a {
   color: var(--text-muted);
 }
 
+.companies-page,
+.company-form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.company-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.company-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.form-field input,
+.field-row input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.form-field input:focus,
+.field-row input:focus {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 1px;
+}
+
+.details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.details-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.details-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.field-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
+  gap: 16px;
+  align-items: center;
+}
+
+.field-remove {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.field-remove:hover {
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 10%, transparent);
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 767px) {
   .task-grid {
     grid-template-columns: 1fr;
@@ -821,6 +930,31 @@ a {
 
   .daily-footer .btn {
     width: 100%;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr 40px;
+    grid-template-rows: auto auto;
+  }
+
+  .field-row input:first-of-type {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .field-row input:last-of-type {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .field-row .field-remove {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    height: 100%;
+  }
+
+  .form-actions .btn {
+    flex: 1;
   }
 }
 
