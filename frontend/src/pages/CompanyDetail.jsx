@@ -10,6 +10,7 @@ import {
   formatAppliedDate,
   newFieldRow,
 } from "../lib/companyFields";
+import { DetailSkeleton, PageLoadError } from "../components/ui/PageStatus";
 
 export default function CompanyDetail() {
   const { id } = useParams();
@@ -17,7 +18,9 @@ export default function CompanyDetail() {
   const { setOverrideTitle } = usePageTitle();
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [error, setError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [draftFields, setDraftFields] = useState([]);
@@ -30,6 +33,7 @@ export default function CompanyDetail() {
     (async () => {
       setLoading(true);
       setError("");
+      setLoadError(false);
       setEditing(false);
       try {
         const data = await fetchCompany(id);
@@ -40,9 +44,9 @@ export default function CompanyDetail() {
             (data.fields || []).map((field) => newFieldRow(field))
           );
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(err.response?.data?.error || "Failed to load application.");
+          setLoadError(true);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -51,7 +55,7 @@ export default function CompanyDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, reloadToken]);
 
   useEffect(() => {
     setOverrideTitle(company?.company_name || null);
@@ -117,17 +121,19 @@ export default function CompanyDetail() {
     }
   }
 
-  if (loading) {
-    return <p className="daily-status">Loading application…</p>;
+  if (loading && !company) {
+    return <DetailSkeleton />;
+  }
+
+  if (loadError && !company) {
+    return (
+      <PageLoadError onRetry={() => setReloadToken((value) => value + 1)} />
+    );
   }
 
   if (!company) {
     return (
-      <div className="company-detail-page">
-        <div className="daily-banner" role="alert">
-          {error || "Company not found"}
-        </div>
-      </div>
+      <PageLoadError onRetry={() => setReloadToken((value) => value + 1)} />
     );
   }
 

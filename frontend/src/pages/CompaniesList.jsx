@@ -5,6 +5,7 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import { downloadCompaniesCsv, fetchCompanies } from "../api/companies";
 import { fieldCountLabel, formatAppliedDate } from "../lib/companyFields";
+import { ListSkeleton, PageLoadError } from "../components/ui/PageStatus";
 
 export default function CompaniesList() {
   const location = useLocation();
@@ -14,6 +15,7 @@ export default function CompaniesList() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -30,10 +32,8 @@ export default function CompaniesList() {
       try {
         const data = await fetchCompanies();
         if (!cancelled) setCompanies(Array.isArray(data) ? data : []);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.response?.data?.error || "Failed to load applications.");
-        }
+      } catch {
+        if (!cancelled) setError("failed");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -41,7 +41,7 @@ export default function CompaniesList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -70,7 +70,9 @@ export default function CompaniesList() {
           {toast}
         </div>
       ) : null}
-      {error ? (
+      {error === "failed" ? (
+        <PageLoadError onRetry={() => setReloadToken((value) => value + 1)} />
+      ) : error ? (
         <div className="daily-banner" role="alert">
           {error}
         </div>
@@ -94,8 +96,8 @@ export default function CompaniesList() {
       />
 
       {loading ? (
-        <p className="daily-status">Loading applications…</p>
-      ) : companies.length === 0 ? (
+        <ListSkeleton />
+      ) : error === "failed" ? null : companies.length === 0 ? (
         <div className="companies-empty">
           <p>No applications logged yet.</p>
           <Link to="/companies/new" className="btn btn-primary">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchDailyLogHistory } from "../api/dailyLog";
 import HistoryDayCard from "./history/HistoryDayCard";
+import { HistorySkeleton, PageLoadError } from "../components/ui/PageStatus";
 
 export default function History() {
   const [rows, setRows] = useState([]);
@@ -8,6 +9,7 @@ export default function History() {
   const [error, setError] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
   const [openId, setOpenId] = useState(null);
 
   useEffect(() => {
@@ -18,9 +20,9 @@ export default function History() {
       try {
         const data = await fetchDailyLogHistory();
         if (!cancelled) setRows(Array.isArray(data) ? data : []);
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(err.response?.data?.error || "Failed to load history.");
+          setError("failed");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -29,7 +31,7 @@ export default function History() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   const filtered = useMemo(() => {
     return rows.filter((row) => {
@@ -42,7 +44,9 @@ export default function History() {
 
   return (
     <div className="history-page">
-      {error ? (
+      {error === "failed" ? (
+        <PageLoadError onRetry={() => setReloadToken((value) => value + 1)} />
+      ) : error ? (
         <div className="daily-banner" role="alert">
           {error}
         </div>
@@ -68,8 +72,8 @@ export default function History() {
       </div>
 
       {loading ? (
-        <p className="daily-status">Loading history…</p>
-      ) : rows.length === 0 ? (
+        <HistorySkeleton />
+      ) : error === "failed" ? null : rows.length === 0 ? (
         <div className="history-empty">
           No finalized days yet — check back after your first full day.
         </div>

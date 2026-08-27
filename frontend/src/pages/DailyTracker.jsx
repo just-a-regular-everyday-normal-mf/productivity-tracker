@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import ProgressBar from "../components/ui/ProgressBar";
-import { fetchTodayLog, fetchDailyLogHistory, patchDailyLog } from "../api/dailyLog";
+import { fetchTodayLog, patchDailyLog } from "../api/dailyLog";
 import {
   interviewFraction,
   isTaskComplete,
@@ -17,6 +17,7 @@ import ReadinessGauge from "./daily/ReadinessGauge";
 import Stepper from "./daily/Stepper";
 import ToggleSwitch from "./daily/ToggleSwitch";
 import TagInput from "./daily/TagInput";
+import { DailySkeleton, PageLoadError } from "../components/ui/PageStatus";
 
 function Field({ label, children }) {
   return (
@@ -32,6 +33,7 @@ export default function DailyTracker() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [finalizedNotice, setFinalizedNotice] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
   const logRef = useRef(null);
   const serverLogRef = useRef(null);
   const saveTimers = useRef({});
@@ -47,10 +49,7 @@ export default function DailyTracker() {
       setLoading(true);
       setLoadError("");
       try {
-        const [data] = await Promise.all([
-          fetchTodayLog(),
-          fetchDailyLogHistory().catch(() => []),
-        ]);
+        const data = await fetchTodayLog();
         if (!cancelled) {
           setLog(data);
           logRef.current = data;
@@ -58,7 +57,7 @@ export default function DailyTracker() {
         }
       } catch {
         if (!cancelled) {
-          setLoadError("Could not load today's log.");
+          setLoadError("failed");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -68,7 +67,7 @@ export default function DailyTracker() {
       cancelled = true;
       Object.values(saveTimers.current).forEach((timer) => clearTimeout(timer));
     };
-  }, []);
+  }, [reloadToken]);
 
   async function persistTask(key) {
     const current = logRef.current;
@@ -150,26 +149,19 @@ export default function DailyTracker() {
 
   async function refresh() {
     Object.values(saveTimers.current).forEach((timer) => clearTimeout(timer));
-    setLoading(true);
-    try {
-      const data = await fetchTodayLog();
-      setLog(data);
-      logRef.current = data;
-      serverLogRef.current = data;
-      setFinalizedNotice("");
-    } catch {
-      setLoadError("Could not load today's log.");
-    } finally {
-      setLoading(false);
-    }
+    setReloadToken((value) => value + 1);
+  }
+
+  if (loading && !log) {
+    return <DailySkeleton />;
+  }
+
+  if (loadError && !log) {
+    return <PageLoadError onRetry={refresh} />;
   }
 
   if (!log) {
-    return (
-      <p className="daily-status">
-        {loadError || "Loading today's log…"}
-      </p>
-    );
+    return <PageLoadError onRetry={refresh} />;
   }
 
   const { tasks, is_finalized: finalized } = log;
